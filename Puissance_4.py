@@ -1,11 +1,10 @@
 import tkinter.messagebox
 from tkinter import *
 import tkinter.colorchooser
-"""import ttkbootstrap as tb
-from ttkbootstrap.dialogs.colorchooser import ColorChooserDialog"""
 
-lignes = 6
-colonnes = 7
+lignes = 6    # 6
+colonnes = 7  # 7
+objectif = 4
 cercle_diam = 80
 largeur_fenetre = colonnes * 80
 hauteur_fenetre = lignes * 80
@@ -96,8 +95,7 @@ class Puissance4Game(Tk):
                                                                                                                 y=50)
         Button(askcolors, text="Joueur 2", command=lambda joueur=2: self.joueur_color(askcolors, joueur)).place(x=200,
                                                                                                                 y=50)
-        Button(askcolors, text="Valider", bg='green',
-               command=lambda joueur=0: self.joueur_color(askcolors, joueur)).place(
+        Button(askcolors, text="Valider", bg='green', command=lambda joueur=0: self.joueur_color(askcolors, joueur)).place(
             x=120, y=50)
         askcolors.mainloop()
 
@@ -111,12 +109,19 @@ class Puissance4Game(Tk):
         if not self.descente_en_cours:
             x, y = event.x, event.y
             select = self.cnv.find_closest(x, y)
+            while select[0] not in self.pions_id:
+                x += 1
+                y += 1
+                select = self.cnv.find_closest(x, y)
+            # if select[0] in self.pions_id:
+            # print("cercle selectionne: ", select[0])
             org = select[0] % colonnes
             if org == 0:
                 if select[0] > colonnes - 1:
                     org = colonnes
                 else:
                     org = select[0]
+            # print("origine : ", org)
             if self.cnv.itemcget(org, 'fill') == '':
                 self.cnv.itemconfig(org, fill=self.actu_color)
                 self.after(vitesse // 2, self.descente, org, self.actu_color)
@@ -147,42 +152,81 @@ class Puissance4Game(Tk):
     def verify_winner(self, color):
         def vertical_verify(cercle):
             # color = self.cnv.itemcget(cercle, 'fill')
-            if cercle > (lignes * colonnes) // 2:
-                win = True
-                for i in range(4):
-                    if self.cnv.itemcget(cercle - colonnes * i, 'fill') != color:
-                        win = False
-                return win
+            if cercle % colonnes == 0:
+                cercle_ligne = cercle // colonnes
             else:
-                win = True
-                for i in range(4):
-                    if self.cnv.itemcget(cercle + colonnes * i, 'fill') != color:
+                cercle_ligne = cercle // colonnes + 1
+            milieu = []
+            win = True
+            if cercle_ligne >= lignes - (objectif - 1):  # verticale montante
+                for i in range(objectif):
+                    if (cercle - colonnes * i) not in self.pions_id or self.cnv.itemcget(cercle - colonnes * i,
+                                                                                         'fill') != color:
                         win = False
-                return win
+                        break
+                if cercle_ligne != lignes - (objectif - 1):
+                    if win:
+                        print("Vertical haut win.  cercle: ", cercle)
+                    return win
+                else:
+                    milieu.append(win)
+                    win = True
+            if cercle_ligne <= lignes - (objectif - 1):  # verticale descendante
+                for i in range(objectif):
+                    if (cercle + colonnes * i) not in self.pions_id or self.cnv.itemcget(cercle + colonnes * i,
+                                                                                         'fill') != color:
+                        win = False
+                        break
+                if cercle_ligne != lignes - (objectif - 1):
+                    if win:
+                        print("Vertical bas win.  cercle: ", cercle)
+                    return win
+                else:
+                    milieu.append(win)
+            if True in milieu:
+                return True
+            else:
+                return False
 
         def horizontal_verify(cercle):
             # color = self.cnv.itemcget(cercle, 'fill')
             win = True
+            milieu = []
             cercle_column = cercle % colonnes
             if cercle_column == 0:
                 if cercle > colonnes - 1:
                     cercle_column = colonnes
                 else:
                     cercle_column = cercle
-            if cercle_column > lignes // 2:
-                for i in range(4):
-                    if self.cnv.itemcget(cercle - i, 'fill') != color:
+            if cercle_column >= colonnes - (objectif - 1):  # horizontale gauche
+                for i in range(objectif):
+                    if (cercle - i) not in self.pions_id or self.cnv.itemcget(cercle - i, 'fill') != color:
                         win = False
-                return win
+                        break
+                if cercle_column != colonnes - (objectif - 1):
+                    if win:
+                        print("Horizontal gauche win.  cercle: ", cercle)
+                    return win
+                else:
+                    milieu.append(win)
+                    win = True
+            if cercle_column <= colonnes - (objectif - 1):
+                for i in range(objectif):
+                    if (cercle + i) not in self.pions_id or self.cnv.itemcget(cercle + i, 'fill') != color:
+                        win = False
+                        break
+                if cercle_column != colonnes - (objectif - 1):
+                    if win:
+                        print("Horizontal droite win.  cercle: ", cercle)
+                    return win
+                else:
+                    milieu.append(win)
+            if True in milieu:
+                return True
             else:
-                for i in range(4):
-                    if self.cnv.itemcget(cercle + i, 'fill') != color:
-                        win = False
-                return win
+                return False
 
         def diagonal_verify(cercle):
-            win = True
-            milieu = []
             cercle_column = cercle % colonnes
             if cercle_column == 0:
                 if cercle > colonnes - 1:
@@ -193,60 +237,93 @@ class Puissance4Game(Tk):
                 cercle_ligne = cercle // colonnes
             else:
                 cercle_ligne = cercle // colonnes + 1
-            if cercle_ligne > lignes // 2:  # verification de la diagonal montante
-                if cercle_ligne >= cercle_column:  # diagonal de droite
-                    for i in range(4):
-                        if self.cnv.itemcget(cercle - i * colonnes + i, 'fill') != color:
-                            win = False
-                    if cercle_ligne != cercle_column:
-                        """if win:
-                            print("cercle: lg=", cercle_ligne, " co=", cercle_column)"""
-                        return win
-                    else:
-                        milieu.append(win)
-                        win = True
-                if cercle_ligne <= cercle_column:  # diagonal de gauche
-                    for i in range(4):
-                        if self.cnv.itemcget(cercle - i * colonnes - i, 'fill') != color:
-                            win = False
-                    if cercle_ligne != cercle_column:
-                        """if win:
-                            print("cercle: lg=", cercle_ligne, " co=", cercle_column)"""
-                        return win
-                    else:
-                        milieu.append(win)
-                if cercle_ligne == cercle_column:
-                    if True in milieu:
-                        return True
-                    else:
-                        return False
-            else:  # verification de la diagonal descendante
-                if cercle_ligne >= cercle_column - 1:  # diagonal de droite
-                    for i in range(4):
-                        if self.cnv.itemcget(cercle + i * colonnes + i, 'fill') != color:
-                            win = False
-                    if cercle_ligne != cercle_column:
-                        """if win:
-                            print("cercle: lg=", cercle_ligne, " co=", cercle_column)"""
-                        return win
-                    else:
-                        milieu.append(win)
-                        win = True
-                if cercle_ligne <= cercle_column - 1:  # diagonal de gauche
-                    for i in range(4):
-                        if self.cnv.itemcget(cercle + i * colonnes - i, 'fill') != color:
-                            win = False
-                    if cercle_ligne != cercle_column:
-                        if win:
-                            print("cercle: lg=", cercle_ligne, " co=", cercle_column)
-                        return win
-                    else:
-                        milieu.append(win)
-                if cercle_ligne == cercle_column:
-                    if True in milieu:
-                        return True
-                    else:
-                        return False
+
+            def amount_diagonal():
+                win = True
+                milieu = []
+                if cercle_ligne >= lignes - (objectif - 1):  # verification de la diagonal montante
+                    if cercle_column <= colonnes - (objectif - 1):  # diagonal de droite
+                        for i in range(objectif):
+                            if (cercle - i * colonnes + i) not in self.pions_id or self.cnv.itemcget(
+                                    cercle - i * colonnes + i,
+                                    'fill') != color:
+                                win = False
+                                break
+                        if cercle_column != colonnes - (objectif - 1):
+                            if win:
+                                print("cercle: ", cercle)
+                                print("Diagonal du haut cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return win
+                        else:
+                            milieu.append(win)
+                            win = True
+                    if cercle_column >= colonnes - (objectif - 1):  # diagonal de gauche
+                        for i in range(objectif):
+                            if (cercle - i * colonnes - i) not in self.pions_id or self.cnv.itemcget(
+                                    cercle - i * colonnes - i,
+                                    'fill') != color:
+                                win = False
+                                break
+                        if cercle_column != colonnes - (objectif - 1):
+                            if win:
+                                print("cercle: ", cercle)
+                                print("Diagonal du haut cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return win
+                        else:
+                            milieu.append(win)
+                    if cercle_column == colonnes - (objectif - 1):
+                        if True in milieu:
+                            print("Diagonale du haut: ", milieu)
+                            print("Diagonal du haut, point critique cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return True
+                        else:
+                            return False
+
+            def descending_diagonal():
+                win = True
+                milieu = []
+                if cercle_ligne <= lignes - (objectif - 1):  # verification de la diagonal descendante
+                    if cercle_column <= colonnes - (objectif - 1):  # diagonal de droite
+                        for i in range(objectif):
+                            if (cercle + i * colonnes + i) not in self.pions_id or self.cnv.itemcget(
+                                    cercle + i * colonnes + i,
+                                    'fill') != color:
+                                win = False
+                                break
+                        if cercle_column != colonnes - (objectif - 1):
+                            if win:
+                                print("Diagonal du bas cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return win
+                        else:
+                            milieu.append(win)
+                            win = True
+                    if cercle_column >= colonnes - (objectif - 1):  # diagonal de gauche
+                        for i in range(objectif):
+                            if (cercle + i * colonnes - i) not in self.pions_id or self.cnv.itemcget(
+                                    cercle + i * colonnes - i,
+                                    'fill') != color:
+                                win = False
+                                break
+                        if cercle_column != colonnes - (objectif - 1):
+                            if win:
+                                print("Diagonal du bas cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return win
+                        else:
+                            milieu.append(win)
+                    if cercle_column == colonnes - (objectif - 1):
+                        if True in milieu:
+                            print("Diagonale du bas: ", milieu)
+                            print("Diagonale du bas. cercle: lg=", cercle_ligne, " co=", cercle_column)
+                            return True
+                        else:
+                            return False
+
+            diago_verify = [amount_diagonal(), descending_diagonal()]
+            if True in diago_verify:
+                print("verification des deux diagonales: ", diago_verify)
+                return True
+            else:
+                return False
 
         end = False
         for pion in self.pions_id:
@@ -279,15 +356,16 @@ class Puissance4Game(Tk):
             self.destroy()
 
     def play_aigain(self):
+        self.actu_color = self.couleur_joueur1.get()
+        self.joueur_actuel.config(bg=self.actu_color)
         self.descente_en_cours = False
         Puissance4Game.First_clic = 0
+        self.Tour.set("Tour du joueur 1")
+        self.obs_label.config(bg='white')
+        self.observation.set("welcome 🎮")
+        self.after(1000, self.reset_obs)
         for pion in self.pions_id:
             self.cnv.itemconfig(pion, fill='')
-            self.Tour.set("Tour du joueur 1")
-            self.obs_label.config(bg='white')
-            self.observation.set("welcome 🎮")
-            self.after(1000, self.reset_obs)
-            self.actu_color = self.couleur_joueur1.get()
 
     def if_egalite(self):
         egalite = True
